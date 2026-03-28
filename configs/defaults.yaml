@@ -1,0 +1,14 @@
+project:
+  name: mental-health-biosignal-tracker
+  dataset_name: insitu_hrv_seed
+
+paths:
+  raw_csv: data/HRV/sensor_hrv_filtered.csv
+  processed_dir: data/processed
+  engineered_csv: data/processed/patient_day_features_enriched.csv
+  reports_dir: reports
+
+modeling:
+  stress_binary_threshold: 0.5
+  random_seed: 42
+  top_k_neighbors: 5
