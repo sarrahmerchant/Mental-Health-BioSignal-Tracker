@@ -1,4 +1,3 @@
-import { PlaceholderPatientLink } from "@/components/patients/placeholder-patient-link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -7,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PatientsDirectory } from "@/components/patients/patients-directory";
 
 export const metadata = {
   title: "Patients",
@@ -19,8 +19,9 @@ export default function PatientsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Patients</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Your panel will list enrolled patients here.
+          <p className="text-muted-foreground mt-1 max-w-xl text-sm">
+            Demo roster—replace <code className="text-foreground bg-muted rounded px-1 text-xs">lib/demo-patients.js</code> with your EHR or API. Badges show pending file uploads (same browser{" "}
+            <code className="text-foreground bg-muted rounded px-1 text-xs">localStorage</code>).
           </p>
         </div>
         <Button variant="outline" disabled>
@@ -30,11 +31,12 @@ export default function PatientsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Directory</CardTitle>
-          <CardDescription>Empty state — no list data yet.</CardDescription>
+          <CardDescription>
+            Open a chart to see uploads and stub model output for that patient.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="text-muted-foreground flex flex-col gap-4 text-sm">
-          <p>To preview navigation, open a placeholder detail view:</p>
-          <PlaceholderPatientLink />
+        <CardContent>
+          <PatientsDirectory />
         </CardContent>
       </Card>
     </div>

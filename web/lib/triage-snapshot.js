@@ -1,5 +1,7 @@
 /**
- * Clinician triage queue snapshot. Replace with API / DB when wired.
+ * Clinician triage queue snapshot (call + milestone columns).
+ * "New uploads" are merged on the client from `lib/demo-uploads-storage.js`.
+ * Replace with API / DB when wired.
  * @returns {{
  *   newUploads: Array<{ id: string, patientLabel: string, detail: string, at: string }>,
  *   callAlerts: Array<{ id: string, patientLabel: string, detail: string, severity: string }>,

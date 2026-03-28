@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Upload, PhoneOutgoing, CalendarClock, ChevronRight } from "lucide-react";
 
@@ -8,8 +11,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  getNewUploadTriageRows,
+  subscribeToDemoData,
+} from "@/lib/demo-uploads-storage";
 import { getTriageSnapshot } from "@/lib/triage-snapshot";
 import { ROUTES } from "@/lib/routes";
+
+function getClientTriageSnapshotJson() {
+  const base = getTriageSnapshot();
+  return JSON.stringify({
+    ...base,
+    newUploads: getNewUploadTriageRows(),
+  });
+}
+
+function getServerTriageSnapshotJson() {
+  const base = getTriageSnapshot();
+  return JSON.stringify({ ...base, newUploads: [] });
+}
 
 function CountBadge({ count }) {
   return (
@@ -48,7 +68,15 @@ function QueueRow({ href, primary, secondary, meta }) {
 }
 
 export function TriageBoard() {
-  const { newUploads, callAlerts, reviewMilestones } = getTriageSnapshot();
+  const triageJson = useSyncExternalStore(
+    subscribeToDemoData,
+    getClientTriageSnapshotJson,
+    getServerTriageSnapshotJson
+  );
+  const { newUploads, callAlerts, reviewMilestones } = useMemo(
+    () => JSON.parse(triageJson),
+    [triageJson]
+  );
   const totalAttention =
     newUploads.length + callAlerts.length + reviewMilestones.length;
 
@@ -61,8 +89,8 @@ export function TriageBoard() {
           </h2>
           <p className="text-muted-foreground max-w-xl text-sm">
             Prioritize patients who need a look, a call, or a scheduled review.
-            Queues will fill automatically when uploads and milestones are
-            connected.
+            New wearable uploads appear here after patients submit files from the
+            portal (demo: same browser localStorage).
           </p>
         </div>
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
@@ -94,15 +122,16 @@ export function TriageBoard() {
           <CardContent className="pt-0">
             {newUploads.length === 0 ? (
               <EmptyQueue>
-                No new uploads since your last review. When patients share Apple
-                Health / Watch data, they will appear here first.
+                No new uploads awaiting review. When a patient uploads from the
+                patient portal, the file appears here until you mark it reviewed
+                on their chart.
               </EmptyQueue>
             ) : (
               <ul className="divide-border -mx-2 divide-y">
                 {newUploads.map((row) => (
                   <li key={row.id}>
                     <QueueRow
-                      href={ROUTES.patient(row.id)}
+                      href={ROUTES.patient(row.patientId)}
                       primary={row.patientLabel}
                       secondary={row.detail}
                       meta={row.at}
