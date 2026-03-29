@@ -2,7 +2,16 @@
 
 import { useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { Activity, Heart, Moon, Upload, History, CheckCircle2 } from "lucide-react";
+import {
+  Activity,
+  Heart,
+  Moon,
+  Upload,
+  History,
+  CheckCircle2,
+  UserRound,
+  Shield,
+} from "lucide-react";
 
 import {
   Card,
@@ -12,7 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DEMO_PATIENTS } from "@/lib/demo-patients";
+import { getDemoPatient } from "@/lib/demo-patients";
 import {
   formatUploadedAgo,
   getUploadsForPatient,
@@ -30,21 +39,23 @@ export function PatientDashboardView() {
   const [session] = useState(() =>
     validatePatientSession() ? readPatientSession() : null
   );
-  const [patientRecordId, setPatientRecordId] = useState(
-    () => DEMO_PATIENTS[0]?.id ?? ""
-  );
   const [toast, setToast] = useState(null);
   const fileRef = useRef(null);
 
+  const patientId = session?.patientId ?? "";
+  const rosterPatient = patientId ? getDemoPatient(patientId) : null;
+  const displayName =
+    session?.displayName ?? rosterPatient?.displayName ?? "Patient";
+
   const uploadsJson = useSyncExternalStore(
     subscribeToDemoData,
-    () => JSON.stringify(getUploadsForPatient(patientRecordId)),
+    () => JSON.stringify(getUploadsForPatient(patientId)),
     () => "[]"
   );
   const uploads = useMemo(() => JSON.parse(uploadsJson), [uploadsJson]);
 
   useLayoutEffect(() => {
-    if (!session) {
+    if (!session || !session.patientId) {
       router.replace(ROUTES.patientPortal);
     }
   }, [session, router]);
@@ -52,12 +63,12 @@ export function PatientDashboardView() {
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file || !patientRecordId) {
-      setToast("Choose a demo profile and a file.");
+    if (!file || !patientId) {
+      setToast("Something went wrong. Please sign in again with your code.");
       return;
     }
     recordUploadWithStubInference({
-      patientId: patientRecordId,
+      patientId,
       fileName: file.name,
       sizeBytes: file.size,
     });
@@ -65,7 +76,7 @@ export function PatientDashboardView() {
     setTimeout(() => setToast(null), 5000);
   };
 
-  if (!session) {
+  if (!session || !session.patientId) {
     return (
       <div className="text-muted-foreground flex flex-1 items-center justify-center p-8 text-sm">
         Redirecting…
@@ -78,8 +89,8 @@ export function PatientDashboardView() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Your dashboard</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Welcome back{session.patientLabel ? `, ${session.patientLabel}` : ""}.
-          Upload Apple Health / Watch exports for your clinician to review.
+          Signed in as <span className="text-foreground font-medium">{displayName}</span>.
+          Uploads are tied only to your chart—other patients are never visible here.
         </p>
       </div>
 
@@ -90,87 +101,120 @@ export function PatientDashboardView() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="border-l-primary/60 border-l-4 lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Upload className="size-4" />
-              Upload data
+              <UserRound className="size-4" />
+              Your chart (this code only)
             </CardTitle>
             <CardDescription>
-              Demo: pick the clinic record that matches you, then choose any file
-              (e.g. Health export .zip). Files are not parsed yet—only logged for
-              triage.
+              Information scoped to the access code your clinician gave you.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <label htmlFor="demo-patient-record" className="text-sm font-medium">
-                Clinic profile (demo)
-              </label>
-              <select
-                id="demo-patient-record"
-                value={patientRecordId}
-                onChange={(e) => setPatientRecordId(e.target.value)}
-                className="border-input bg-background h-9 w-full rounded-lg border px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {DEMO_PATIENTS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.displayName}
-                  </option>
-                ))}
-              </select>
+          <CardContent className="space-y-3 text-sm">
+            <div>
+              <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                Name on chart
+              </p>
+              <p className="font-medium">{displayName}</p>
             </div>
-            <input
-              ref={fileRef}
-              type="file"
-              className="sr-only"
-              accept=".zip,.xml,.csv,.json,application/zip,text/xml,text/csv,application/json,*/*"
-              onChange={handleFile}
-            />
-            <Button
-              type="button"
-              className="w-full sm:w-auto"
-              onClick={() => fileRef.current?.click()}
-            >
-              Choose file
-            </Button>
+            {rosterPatient && (
+              <>
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                    Next review target (demo)
+                  </p>
+                  <p>{rosterPatient.nextReview}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                    Record ID (demo)
+                  </p>
+                  <p className="font-mono text-xs">{patientId}</p>
+                </div>
+              </>
+            )}
+            {!rosterPatient && (
+              <p className="text-muted-foreground text-xs">
+                This patient id is not on the demo roster—clinician view may still
+                list uploads under <span className="font-mono">{patientId}</span>.
+              </p>
+            )}
+            <div className="text-muted-foreground flex gap-2 border-t pt-3 text-xs leading-snug">
+              <Shield className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              <span>
+                You cannot switch to another patient or see their data from this
+                session. Production should enforce the same on the server.
+              </span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <History className="size-4" />
-              Past uploads
-            </CardTitle>
-            <CardDescription>
-              Uploads for the selected clinic profile in this browser.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {uploads.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                No files yet for this profile.
-              </p>
-            ) : (
-              <ul className="divide-border divide-y text-sm">
-                {uploads.map((u) => (
-                  <li
-                    key={u.id}
-                    className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <span className="font-mono text-xs">{u.fileName}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {formatUploadedAgo(u.uploadedAt)}
-                      {u.reviewedAt && " · Reviewed by clinic"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Upload className="size-4" />
+                Upload data
+              </CardTitle>
+              <CardDescription>
+                Apple Health / Watch exports (e.g. .zip). Files are stored for demo
+                triage only—not clinically parsed yet.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <input
+                ref={fileRef}
+                type="file"
+                className="sr-only"
+                accept=".zip,.xml,.csv,.json,application/zip,text/xml,text/csv,application/json,*/*"
+                onChange={handleFile}
+              />
+              <Button
+                type="button"
+                className="w-full sm:w-auto"
+                onClick={() => fileRef.current?.click()}
+              >
+                Choose file
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="size-4" />
+                Your upload history
+              </CardTitle>
+              <CardDescription>
+                Only uploads sent from this portal for your chart in this browser.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {uploads.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  No files yet. Upload an export to share with your care team.
+                </p>
+              ) : (
+                <ul className="divide-border divide-y text-sm">
+                  {uploads.map((u) => (
+                    <li
+                      key={u.id}
+                      className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <span className="font-mono text-xs">{u.fileName}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {formatUploadedAgo(u.uploadedAt)}
+                        {u.reviewedAt && " · Reviewed by clinic"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div>

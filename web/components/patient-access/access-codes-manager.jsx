@@ -18,6 +18,7 @@ import {
   revokeAccessCode,
   writeCodes,
 } from "@/lib/demo-access-storage";
+import { DEMO_PATIENTS, getDemoPatient } from "@/lib/demo-patients";
 import { ROUTES } from "@/lib/routes";
 
 function formatExpiry(iso) {
@@ -31,9 +32,19 @@ function formatExpiry(iso) {
   }
 }
 
+function patientNameForCodeRow(c) {
+  if (c.patientId) {
+    return getDemoPatient(c.patientId)?.displayName ?? c.patientId;
+  }
+  if (c.patientLabel) return c.patientLabel;
+  return "—";
+}
+
 export function AccessCodesManager() {
   const [codes, setCodes] = useState([]);
-  const [label, setLabel] = useState("");
+  const [selectedPatientId, setSelectedPatientId] = useState(
+    () => DEMO_PATIENTS[0]?.id ?? ""
+  );
   const [validityDays, setValidityDays] = useState("14");
   const [lastCreated, setLastCreated] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -48,15 +59,15 @@ export function AccessCodesManager() {
 
   const handleGenerate = (e) => {
     e.preventDefault();
+    if (!selectedPatientId) return;
     const days = Number(validityDays) || 14;
     const entry = createAccessCodeEntry({
-      patientLabel: label,
+      patientId: selectedPatientId,
       validityDays: days,
     });
     setLastCreated(entry);
     setCopied(false);
     refresh();
-    setLabel("");
   };
 
   const handleCopy = async (code) => {
@@ -94,23 +105,31 @@ export function AccessCodesManager() {
         <CardHeader>
           <CardTitle className="text-base">Create access code</CardTitle>
           <CardDescription>
-            Generates a one-time patient link code stored in{" "}
+            Each code is tied to one patient on the demo roster. Redeeming it
+            opens only that person&apos;s portal. Stored in{" "}
             <span className="font-mono">localStorage</span> for this browser
             only—replace with a secure API in production.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleGenerate} className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
-            <div className="grid min-w-[200px] flex-1 gap-2">
-              <label htmlFor="patient-label" className="text-sm font-medium">
-                Patient label
+            <div className="grid min-w-[220px] flex-1 gap-2">
+              <label htmlFor="access-code-patient" className="text-sm font-medium">
+                Patient
               </label>
-              <Input
-                id="patient-label"
-                placeholder="e.g. Initials or internal ID"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-              />
+              <select
+                id="access-code-patient"
+                value={selectedPatientId}
+                onChange={(e) => setSelectedPatientId(e.target.value)}
+                className="border-input bg-background h-9 w-full rounded-lg border px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                required
+              >
+                {DEMO_PATIENTS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.displayName}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid w-full gap-2 sm:w-40">
               <label htmlFor="valid-days" className="text-sm font-medium">
@@ -125,7 +144,11 @@ export function AccessCodesManager() {
                 onChange={(e) => setValidityDays(e.target.value)}
               />
             </div>
-            <Button type="submit" className="gap-1.5 sm:shrink-0">
+            <Button
+              type="submit"
+              className="gap-1.5 sm:shrink-0"
+              disabled={!selectedPatientId}
+            >
               <Plus className="size-4" />
               Generate code
             </Button>
@@ -152,13 +175,17 @@ export function AccessCodesManager() {
                 </Button>
               </div>
               <p className="text-muted-foreground text-xs">
-                Patient opens{" "}
+                For{" "}
+                <span className="text-foreground font-medium">
+                  {getDemoPatient(lastCreated.patientId)?.displayName ??
+                    lastCreated.patientId}
+                </span>
+                . They open{" "}
                 <span className="text-foreground font-medium">
                   {typeof window !== "undefined" ? window.location.origin : ""}
                   {ROUTES.patientPortal}
                 </span>{" "}
-                and enters this code once. Each code works for a single
-                redemption.
+                and enter this code once. Each code works for a single redemption.
               </p>
             </div>
           )}
@@ -189,7 +216,7 @@ export function AccessCodesManager() {
                 <thead className="bg-muted/50 border-b text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2">Code</th>
-                    <th className="px-3 py-2">Label</th>
+                    <th className="px-3 py-2">Patient</th>
                     <th className="px-3 py-2">Expires</th>
                     <th className="px-3 py-2">Status</th>
                     <th className="px-3 py-2 w-28" />
@@ -207,7 +234,14 @@ export function AccessCodesManager() {
                     return (
                       <tr key={c.id} className="hover:bg-muted/30">
                         <td className="px-3 py-2 font-mono text-xs">{c.code}</td>
-                        <td className="px-3 py-2">{c.patientLabel}</td>
+                        <td className="px-3 py-2">
+                          <span>{patientNameForCodeRow(c)}</span>
+                          {!c.patientId && (
+                            <span className="text-muted-foreground ml-1 text-xs">
+                              (legacy—cannot redeem)
+                            </span>
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-muted-foreground">
                           {formatExpiry(c.expiresAt)}
                         </td>

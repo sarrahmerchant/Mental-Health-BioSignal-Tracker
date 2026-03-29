@@ -19,6 +19,7 @@ import {
   markCodeRedeemed,
   writePatientSession,
 } from "@/lib/demo-access-storage";
+import { getDemoPatient } from "@/lib/demo-patients";
 import { ROUTES } from "@/lib/routes";
 
 export function RedeemAccessForm() {
@@ -42,15 +43,24 @@ export function RedeemAccessForm() {
       setPending(false);
       return;
     }
+    if (!entry.patientId) {
+      setError(
+        "This code is outdated (not tied to a patient chart). Ask your clinician for a new code."
+      );
+      setPending(false);
+      return;
+    }
     if (!isCodeRedeemable(entry)) {
       setError("This code is no longer valid (used, expired, or revoked).");
       setPending(false);
       return;
     }
     markCodeRedeemed(entry.id);
+    const roster = getDemoPatient(entry.patientId);
     writePatientSession({
       codeId: entry.id,
-      patientLabel: entry.patientLabel,
+      patientId: entry.patientId,
+      displayName: roster?.displayName ?? "Patient",
       redeemedAt: new Date().toISOString(),
     });
     router.push(ROUTES.patientDashboard);
@@ -63,8 +73,8 @@ export function RedeemAccessForm() {
       <CardHeader>
         <CardTitle className="text-base">Enter your access code</CardTitle>
         <CardDescription>
-          Your clinician sent you a code to open your personal dashboard. Codes
-          work once per device session in this demo.
+          Your clinician issued this code for your chart only. It works once per
+          browser session in this demo—no access to other patients.
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>

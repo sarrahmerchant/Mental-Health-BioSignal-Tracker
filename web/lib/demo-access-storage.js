@@ -42,7 +42,10 @@ export function writeCodes(codes) {
   window.localStorage.setItem(DEMO_CODES_KEY, JSON.stringify(codes));
 }
 
-export function createAccessCodeEntry({ patientLabel, validityDays }) {
+/**
+ * @param {{ patientId: string, validityDays: number }} opts — patientId must match your roster (e.g. demo-pat-001).
+ */
+export function createAccessCodeEntry({ patientId, validityDays }) {
   const now = Date.now();
   const expiresAt = new Date(
     now + Math.max(1, validityDays) * 24 * 60 * 60 * 1000
@@ -50,7 +53,7 @@ export function createAccessCodeEntry({ patientLabel, validityDays }) {
   const entry = {
     id: crypto.randomUUID(),
     code: generateAccessCodeString(),
-    patientLabel: patientLabel?.trim() || "Patient",
+    patientId,
     createdAt: new Date(now).toISOString(),
     expiresAt,
     revoked: false,
@@ -77,6 +80,7 @@ export function findCodeByString(raw) {
 export function isCodeRedeemable(entry) {
   if (!entry || entry.revoked) return false;
   if (entry.redeemedAt) return false;
+  if (!entry.patientId) return false;
   return Date.now() < new Date(entry.expiresAt).getTime();
 }
 
@@ -108,14 +112,15 @@ export function clearPatientSession() {
   window.sessionStorage.removeItem(PATIENT_SESSION_KEY);
 }
 
-/** Returns true if session is still valid against current code list. */
+/** Returns true if session is still valid and bound to the code’s patient only. */
 export function validatePatientSession() {
   const session = readPatientSession();
-  if (!session?.codeId) return false;
+  if (!session?.codeId || !session?.patientId) return false;
   const codes = readCodes();
   const entry = codes.find((c) => c.id === session.codeId);
   if (!entry || entry.revoked) return false;
   if (!entry.redeemedAt) return false;
+  if (entry.patientId !== session.patientId) return false;
   if (Date.now() >= new Date(entry.expiresAt).getTime()) return false;
   return true;
 }
