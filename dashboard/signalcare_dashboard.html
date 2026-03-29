@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SignalCare Shareable Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="./data/dashboard_data.js"></script>
+  <style>
+    :root{
+      --bg:#f4f6f6;--surface:#ffffff;--muted:#6b7280;--border:#dde1e1;--teal:#00534a;--teal-2:#00695c;
+      --blue:#2196F3;--red:#E53935;--orange:#FB8C00;--green:#00897B;--violet:#7E57C2;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:#1f2937}
+    .app-header{background:linear-gradient(135deg,var(--teal),#003d36);padding:14px 28px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+    .brand{font-size:18px;font-weight:700}
+    .user{font-size:13px;opacity:.9}
+    .breadcrumb{background:#e4edeb;border-bottom:1px solid #c8d8d5;padding:10px 28px;font-size:12px;font-weight:700;color:var(--teal-2);text-transform:uppercase;letter-spacing:.4px}
+    .wrap{max-width:1280px;margin:0 auto;padding:22px 22px 34px}
+    .title h1{margin:0;font-size:24px}
+    .title p{margin:8px 0 0;color:#555}
+    .filters{display:grid;grid-template-columns:2.2fr 1.2fr 1.2fr 140px;gap:16px;margin-top:16px}
+    .field label{display:block;font-size:12px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:.45px;margin-bottom:8px}
+    .field input,.field select,.field button{width:100%;height:44px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:0 14px;font-size:14px}
+    .field button{cursor:pointer}
+    .section-hdr{margin-top:24px;border-bottom:2px solid var(--teal-2);padding-bottom:8px;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+    .table-wrap{margin-top:10px;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:auto}
+    table{width:100%;min-width:1080px;border-collapse:collapse}
+    thead th{background:#eef1f1;font-size:11px;text-transform:uppercase;letter-spacing:.6px;padding:12px;border-bottom:2px solid #cfd5d4;text-align:left;cursor:pointer;user-select:none}
+    thead th:hover{background:#e5ebea}
+    thead th .sub{display:block;font-size:10px;font-weight:400;color:#888;text-transform:none;letter-spacing:0;margin-top:2px}
+    thead th .sort{display:inline-block;margin-left:6px;font-size:10px;color:#a3a3a3}
+    thead th.active .sort{color:#00695c}
+    tbody td{padding:12px;border-bottom:1px solid #eaeded;white-space:nowrap}
+    tbody tr{cursor:pointer}
+    tbody tr:hover{background:#e8f0ef}
+    .metric{display:flex;align-items:center;gap:8px}
+    .metric .val{font-weight:700;font-size:14px}
+    .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px}
+    .dot.declining{background:#E53935}.dot.stable{background:#FFA726}.dot.improving{background:#43A047}
+    .status{display:inline-flex;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
+    .status.declining{background:#fde8e8;color:#c62828}
+    .status.stable{background:#fff3e0;color:#e65100}
+    .status.improving{background:#e8f5e9;color:#2e7d32}
+    .badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:12px;font-weight:700}
+    .badge.red{background:#E53935;color:#fff}.badge.zero{color:#999}
+    .hidden{display:none !important}
+    .top-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+    .back-btn{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--border);background:#fff;cursor:pointer}
+    .patient-banner{background:#fff;border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-top:14px;display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+    .pid{font-size:22px;font-weight:800;color:var(--teal-2)}
+    .stat{font-size:14px;color:#555}
+    .mini-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:12px}
+    .mini{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+    .mini .k{font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:800;letter-spacing:.5px;margin-bottom:6px}
+    .mini .v{font-size:24px;font-weight:800}
+    .content{display:grid;grid-template-columns:1.6fr .95fr;gap:16px;margin-top:12px}
+    .card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px}
+    .card h3{margin:0 0 10px;font-size:13px;color:var(--teal-2);text-transform:uppercase;letter-spacing:.35px}
+    .chart-card{padding:14px 14px 10px}
+    .chart-title{font-size:14px;font-weight:800;margin:2px 0 10px}
+    .help-dot{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#e6f3f1;color:var(--teal-2);font-size:12px;font-weight:800;cursor:help;margin-left:6px}
+    .fact{background:#f8fafb;border:1px solid #e5eaec;border-radius:8px;padding:10px 12px;margin-top:8px}
+    .fact strong{display:block;font-size:12px;color:#374151;margin-bottom:4px}
+    .fact span{font-size:13px;line-height:1.55}
+    .alert-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid #f0d3d3;background:#fff7f7;border-radius:8px;margin-top:8px}
+    .alert-title{font-size:13px;font-weight:800;color:#b42318}
+    .alert-meta{font-size:12px;color:#6b7280;margin-top:3px}
+    .alert-pill{padding:4px 8px;border-radius:999px;background:#fde8e8;color:#c62828;font-size:11px;font-weight:800;text-transform:uppercase}
+    .footer{margin-top:22px;padding-top:14px;border-top:1px solid #dde1e1;font-size:12px;color:#6b7280}
+    .plotly-chart{width:100%;height:320px}
+    .plotly-chart.small{height:280px}
+    .plotly-chart.forecast{height:320px}
+    .small-multiples{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .small-plot{border:1px solid #e6ebeb;border-radius:8px;padding:10px;background:#fcfdfd}
+    .small-plot h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.45px;color:#4b5563;display:flex;align-items:center;gap:6px}
+    .small-plot .plot{height:180px;width:100%}
+    .help-wrap{position:relative;display:inline-flex;align-items:center}
+    .help-popover{
+      position:absolute;
+      left:22px;
+      top:-4px;
+      min-width:220px;
+      max-width:300px;
+      background:#0f172a;
+      color:#fff;
+      border-radius:8px;
+      padding:8px 10px;
+      font-size:11px;
+      line-height:1.4;
+      opacity:0;
+      transform:translateY(2px);
+      pointer-events:none;
+      transition:opacity .08s ease, transform .08s ease;
+      z-index:20;
+      text-transform:none;
+      letter-spacing:0;
+      font-weight:500;
+    }
+    .help-wrap:hover .help-popover,.help-wrap:focus-within .help-popover{opacity:1;transform:translateY(0)}
+    @media (max-width: 1080px){
+      .filters{grid-template-columns:1fr}
+      .mini-grid{grid-template-columns:1fr 1fr 1fr}
+      .content{grid-template-columns:1fr}
+    }
+    @media (max-width: 640px){
+      .mini-grid{grid-template-columns:1fr 1fr}
+      .wrap{padding:16px}
+    }
+    @media (max-width: 900px){
+      .small-multiples{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width: 620px){
+      .small-multiples{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="app-header">
+    <div class="brand">SignalCare</div>
+    <div class="user">Clinician Dashboard</div>
+  </div>
+  <div class="breadcrumb" id="breadcrumb">Dashboard &rsaquo; Mental Health BioSignal Monitoring</div>
+  <div class="wrap">
+    <div id="list-view">
+      <div class="title">
+        <h1>Mental Health BioSignal Monitoring</h1>
+        <p>Model-assisted monitoring with insomnia, depression, and anxiety markers.</p>
+      </div>
+      <div class="filters">
+        <div class="field">
+          <label for="search">Search by patient ID</label>
+          <input id="search" placeholder="e.g. am77" />
+        </div>
+        <div class="field">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter">
+            <option value="">NO FILTER</option>
+            <option value="declining">Declining</option>
+            <option value="stable">Stable</option>
+            <option value="improving">Improving</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="alertFilter">Alerts</label>
+          <select id="alertFilter">
+            <option value="">NO FILTER</option>
+            <option value="has">Has Alerts</option>
+            <option value="none">No Alerts</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button id="resetBtn">Reset</button>
+        </div>
+      </div>
+      <div class="section-hdr">Patients</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="pid">Patient ID<span class="sort">▲▼</span></th>
+              <th data-sort="rmssd">HRV (RMSSD)<span class="sort">▲▼</span><span class="sub">2 wk trend . Last reading</span></th>
+              <th data-sort="hr">Heart Rate<span class="sort">▲▼</span><span class="sub">2 wk trend . Last reading</span></th>
+              <th data-sort="isi">Insomnia (ISI)<span class="sort">▲▼</span><span class="sub">2 wk trend . Last score</span></th>
+              <th data-sort="phq9">Depression (PHQ-9)<span class="sort">▲▼</span><span class="sub">2 wk trend . Last score</span></th>
+              <th data-sort="gad7">Anxiety (GAD-7)<span class="sort">▲▼</span><span class="sub">2 wk trend . Last score</span></th>
+              <th data-sort="alerts">Alerts<span class="sort">▲▼</span><span class="sub">P90 exceedance</span></th>
+              <th data-sort="status_order">Status<span class="sort">▲▼</span></th>
+            </tr>
+          </thead>
+          <tbody id="patient-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="detail-view" class="hidden">
+      <div class="top-row">
+        <button class="back-btn" id="backBtn">&larr; Back to patient list</button>
+      </div>
+      <div class="patient-banner" id="patient-banner"></div>
+      <div class="mini-grid" id="mini-grid"></div>
+      <div class="content">
+        <div>
+          <div class="card chart-card">
+            <div class="chart-title">
+              Physiology and Habits (Individual Trends)
+            </div>
+            <div class="small-multiples">
+              <div class="small-plot"><h4>Heart Rate <span class="help-wrap"><span class="help-dot">?</span><span class="help-popover">Nightly mean heart rate in beats per minute. Persistent upward shifts can reflect strain, arousal, or poor recovery.</span></span></h4><div id="plot-hr" class="plot"></div></div>
+              <div class="small-plot"><h4>RMSSD <span class="help-wrap"><span class="help-dot">?</span><span class="help-popover">Nightly vagal HRV marker in milliseconds. Lower RMSSD over time can suggest reduced parasympathetic recovery.</span></span></h4><div id="plot-rmssd" class="plot"></div></div>
+              <div class="small-plot"><h4>LF/HF <span class="help-wrap"><span class="help-dot">?</span><span class="help-popover">Sympathovagal balance proxy. Sustained increases can indicate sympathetic dominance; context matters across patients.</span></span></h4><div id="plot-lfhf" class="plot"></div></div>
+              <div class="small-plot"><h4>Sleep Hours <span class="help-wrap"><span class="help-dot">?</span><span class="help-popover">Total sleep duration per night from aligned sleep records. Large reductions may precede worsening symptoms.</span></span></h4><div id="plot-sleep" class="plot"></div></div>
+              <div class="small-plot"><h4>Light Avg <span class="help-wrap"><span class="help-dot">?</span><span class="help-popover">Daily average ambient light exposure from wearable segments. Useful proxy for circadian rhythm regularity.</span></span></h4><div id="plot-light" class="plot"></div></div>
+              <div class="small-plot"><h4>Calories (Daily Sum) <span class="help-wrap"><span class="help-dot">?</span><span class="help-popover">Daily total calories burned, aggregated as sum of all sensor segments for the same day.</span></span></h4><div id="plot-cal" class="plot"></div></div>
+            </div>
+          </div>
+          <div class="card chart-card" style="margin-top:12px;">
+            <div class="chart-title">Mental Health Trajectory (Solid Historical, Dotted Forecast)</div>
+            <div id="chart-mental" class="plotly-chart small"></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <h3>Alerts</h3>
+            <div id="alerts-card"></div>
+          </div>
+          <div class="card">
+            <h3>Clinical Notes</h3>
+            <div id="explain-card"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">Screening support only - outputs are associated signals, not diagnoses.</div>
+  </div>
+
+  <script>
+    const DATA = (window.SIGNALCARE_DATA && Array.isArray(window.SIGNALCARE_DATA.patients))
+      ? window.SIGNALCARE_DATA
+      : { patients: [] };
+    let ACTIVE_DATA = DATA;
+    const STATE = { sortKey: "status_order", sortDir: "asc", selected: null };
+
+    function badge(n) {
+      return n ? `<span class="badge red">${n}</span>` : `<span class="badge zero">0</span>`;
+    }
+    function statusPill(status) {
+      return `<span class="status ${status}">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
+    }
+    function dot(status) {
+      return `<span class="dot ${status}"></span>`;
+    }
+    function fmt(value, digits = 1) {
+      const num = Number(value);
+      return Number.isFinite(num) ? num.toFixed(digits) : "N/A";
+    }
+
+    const SORT_GETTERS = {
+      pid: p => p.pid.toLowerCase(),
+      rmssd: p => Number(p.metrics.rmssd ?? -1),
+      hr: p => Number(p.metrics.hr ?? -1),
+      isi: p => Number(p.metrics.isi ?? -1),
+      phq9: p => Number(p.metrics.phq9 ?? -1),
+      gad7: p => Number(p.metrics.gad7 ?? -1),
+      alerts: p => Number(p.alerts),
+      status_order: p => Number(p.status_order)
+    };
+
+    function renderSortHeaders() {
+      document.querySelectorAll("thead th[data-sort]").forEach(th => {
+        th.classList.remove("active");
+        const icon = th.querySelector(".sort");
+        if (!icon) return;
+        if (th.dataset.sort === STATE.sortKey) {
+          th.classList.add("active");
+          icon.textContent = STATE.sortDir === "asc" ? "▲" : "▼";
+        } else {
+          icon.textContent = "▲▼";
+        }
+      });
+    }
+
+    function getFilteredPatients() {
+      const q = document.getElementById("search").value.trim().toLowerCase();
+      const status = document.getElementById("statusFilter").value;
+      const alerts = document.getElementById("alertFilter").value;
+      let rows = [...ACTIVE_DATA.patients];
+      if (q) rows = rows.filter(p => p.pid.toLowerCase().includes(q));
+      if (status) rows = rows.filter(p => p.status === status);
+      if (alerts === "has") rows = rows.filter(p => p.alerts > 0);
+      if (alerts === "none") rows = rows.filter(p => p.alerts === 0);
+      const getter = SORT_GETTERS[STATE.sortKey] || SORT_GETTERS.status_order;
+      rows.sort((a, b) => {
+        const ka = getter(a);
+        const kb = getter(b);
+        if (ka < kb) return STATE.sortDir === "asc" ? -1 : 1;
+        if (ka > kb) return STATE.sortDir === "asc" ? 1 : -1;
+        return 0;
+      });
+      return rows;
+    }
+
+    function renderTable() {
+      const body = document.getElementById("patient-table-body");
+      const rows = getFilteredPatients();
+      renderSortHeaders();
+      body.innerHTML = rows.map(p => `
+        <tr data-pid="${p.pid}">
+          <td>${dot(p.status)}<span style="font-weight:800;color:#00796B">${p.pid}</span></td>
+          <td><div class="metric">${p.sparks.rmssd || ""}<span class="val">${fmt(p.metrics.rmssd)}</span></div></td>
+          <td><div class="metric">${p.sparks.hr || ""}<span class="val">${fmt(p.metrics.hr)}</span></div></td>
+          <td><div class="metric">${p.sparks.isi || ""}<span class="val">${fmt(p.metrics.isi)}</span></div></td>
+          <td><div class="metric">${p.sparks.phq9 || ""}<span class="val">${fmt(p.metrics.phq9)}</span></div></td>
+          <td><div class="metric">${p.sparks.gad7 || ""}<span class="val">${fmt(p.metrics.gad7)}</span></div></td>
+          <td style="text-align:center">${badge(p.alerts)}</td>
+          <td>${statusPill(p.status)}</td>
+        </tr>
+      `).join("");
+      body.querySelectorAll("tr").forEach(row => {
+        row.addEventListener("click", () => openPatient(row.dataset.pid));
+      });
+    }
+
+    const plotBase = {
+      paper_bgcolor: "#fff",
+      plot_bgcolor: "#fff",
+      template: "plotly_white",
+      margin: { t: 44, b: 40, l: 50, r: 50 },
+      legend: { orientation: "h", y: 1.16, x: 0 }
+    };
+
+    function drawSingleSmallPlot(targetId, days, values, color, yTitle) {
+      Plotly.newPlot(targetId, [
+        {
+          x: days,
+          y: values,
+          mode: "lines+markers",
+          line: { color, width: 2 },
+          marker: { size: 4 },
+          connectgaps: false,
+          hovertemplate: "Day %{x}<br>Value %{y}<extra></extra>"
+        }
+      ], {
+        ...plotBase,
+        margin: { t: 6, b: 30, l: 38, r: 12 },
+        height: 180,
+        showlegend: false,
+        xaxis: { title: "Day", tickfont: { size: 10 }, titlefont: { size: 11 } },
+        yaxis: { title: yTitle, tickfont: { size: 10 }, titlefont: { size: 11 } }
+      }, { displayModeBar: false, responsive: true });
+    }
+
+    function drawPhysioHabitSmallMultiples(p) {
+      const days = p.series.days || [];
+      drawSingleSmallPlot("plot-hr", days, p.series.heart_rate || [], "#E53935", "Heart Rate");
+      drawSingleSmallPlot("plot-rmssd", days, p.series.rmssd || [], "#2196F3", "RMSSD");
+      drawSingleSmallPlot("plot-lfhf", days, p.series.lf_hf || [], "#00897B", "LF/HF");
+      drawSingleSmallPlot("plot-sleep", days, p.series.sleep_hours || [], "#00695C", "Sleep Hours");
+      drawSingleSmallPlot("plot-light", days, p.series.light_avg || [], "#FB8C00", "Light Avg");
+      drawSingleSmallPlot("plot-cal", days, p.series.calories || [], "#7E57C2", "Calories (sum/day)");
+    }
+
+    function drawMentalChart(p) {
+      const chartDays = p.series.chart_days || p.series.days || [];
+      const histISI = p.series.isi_historical_chart || p.series.isi || [];
+      const histPHQ9 = p.series.phq9_historical_chart || p.series.phq9 || [];
+      const histGAD7 = p.series.gad7_historical_chart || p.series.gad7 || [];
+      const foreISI = p.series.isi_forecast_chart || [];
+      const forePHQ9 = p.series.phq9_forecast_chart || [];
+      const foreGAD7 = p.series.gad7_forecast_chart || [];
+      const surveyMask = p.series.survey_day_mask_chart || p.series.survey_day_mask || [];
+      const forecastDays = (p.forecast && p.forecast.forecast_days) || [];
+
+      function surveyPoints(values) {
+        const x = [];
+        const y = [];
+        for (let i = 0; i < chartDays.length; i += 1) {
+          if (!surveyMask[i]) continue;
+          const v = values[i];
+          if (v === null || v === undefined || !Number.isFinite(v)) continue;
+          x.push(chartDays[i]);
+          y.push(v);
+        }
+        return { x, y };
+      }
+
+      function validNumbers(values) {
+        return (values || []).filter(v => v !== null && v !== undefined && Number.isFinite(v));
+      }
+
+      const yValues = [
+        ...validNumbers(histISI),
+        ...validNumbers(histPHQ9),
+        ...validNumbers(histGAD7),
+        ...validNumbers(foreISI),
+        ...validNumbers(forePHQ9),
+        ...validNumbers(foreGAD7)
+      ];
+      const yRange = (() => {
+        if (!yValues.length) return [0, 10];
+        const ymin = Math.min(...yValues);
+        const ymax = Math.max(...yValues);
+        const spread = Math.max(1, ymax - ymin);
+        // Extra padding prevents marker clipping at the chart bounds.
+        const pad = Math.max(1.0, spread * 0.2);
+        const lower = Math.max(0, Math.floor((ymin - pad) * 10) / 10);
+        let upper = Math.ceil((ymax + pad + 0.5) * 10) / 10;
+        if (upper <= lower) {
+          upper = lower + 1;
+        }
+        return [lower, upper];
+      })();
+
+      function surveySeries(values, color, name) {
+        const points = surveyPoints(values);
+        return {
+          x: points.x,
+          y: points.y,
+          name: `${name} (Survey)`,
+          mode: "markers",
+          marker: { size: 10, symbol: "diamond-open", color, line: { width: 2 } },
+          hovertemplate: "%{x}: %{y}<extra>Survey</extra>"
+        };
+      }
+
+      Plotly.newPlot("chart-mental", [
+        { x: chartDays, y: histISI, name: "ISI Historical", mode: "lines+markers", line: { color: "#7E57C2", width: 2 }, marker: { size: 4 }, connectgaps: false },
+        { x: chartDays, y: foreISI, name: "ISI Forecast", mode: "lines+markers", line: { color: "#7E57C2", width: 2, dash: "dot" }, marker: { size: 4 }, connectgaps: false },
+        { x: chartDays, y: histPHQ9, name: "PHQ-9 Historical", mode: "lines+markers", line: { color: "#FB8C00", width: 2 }, marker: { size: 4 }, connectgaps: false },
+        { x: chartDays, y: forePHQ9, name: "PHQ-9 Forecast", mode: "lines+markers", line: { color: "#FB8C00", width: 2, dash: "dot" }, marker: { size: 4 }, connectgaps: false },
+        { x: chartDays, y: histGAD7, name: "GAD-7 Historical", mode: "lines+markers", line: { color: "#00897B", width: 2 }, marker: { size: 4 }, connectgaps: false },
+        { x: chartDays, y: foreGAD7, name: "GAD-7 Forecast", mode: "lines+markers", line: { color: "#00897B", width: 2, dash: "dot" }, marker: { size: 4 }, connectgaps: false },
+        surveySeries(histISI, "#7E57C2", "ISI"),
+        surveySeries(histPHQ9, "#FB8C00", "PHQ-9"),
+        surveySeries(histGAD7, "#00897B", "GAD-7")
+      ], {
+        ...plotBase,
+        height: 280,
+        xaxis: { title: "Day", range: [1, 36], dtick: 2 },
+        yaxis: { title: "Score", range: yRange },
+        shapes: (() => {
+          if (!forecastDays.length) return [];
+          const firstForecastDay = Math.min(...forecastDays);
+          return [{ type: "line", x0: firstForecastDay - 1, x1: firstForecastDay - 1, y0: 0, y1: 1, xref: "x", yref: "paper", line: { color: "#9CA3AF", dash: "dot" } }];
+        })(),
+        annotations: (() => {
+          if (!forecastDays.length) return [];
+          const firstForecastDay = Math.min(...forecastDays);
+          return [{ x: firstForecastDay - 1, y: 1.06, xref: "x", yref: "paper", text: "Forecast starts", showarrow: false, font: { size: 11, color: "#6b7280" } }];
+        })()
+      }, { displayModeBar: false, responsive: true });
+    }
+
+    function openPatient(pid) {
+      const p = ACTIVE_DATA.patients.find(x => x.pid === pid);
+      if (!p) return;
+      STATE.selected = pid;
+      document.getElementById("list-view").classList.add("hidden");
+      document.getElementById("detail-view").classList.remove("hidden");
+      document.getElementById("breadcrumb").innerHTML = `Dashboard &rsaquo; Patients &rsaquo; ${p.pid}`;
+      document.getElementById("patient-banner").innerHTML = `
+        <div class="pid">${dot(p.status)} ${p.pid}</div>
+        <div class="stat"><b>Status:</b> ${statusPill(p.status)}</div>
+        <div class="stat"><b>Days recorded:</b> ${p.days}</div>
+        <div class="stat"><b>Alerts:</b> ${badge(p.alerts)}</div>
+      `;
+      document.getElementById("mini-grid").innerHTML = `
+        <div class="mini"><div class="k">ISI</div><div class="v">${fmt(p.metrics.isi)}</div></div>
+        <div class="mini"><div class="k">PHQ-9</div><div class="v">${fmt(p.metrics.phq9)}</div></div>
+        <div class="mini"><div class="k">GAD-7</div><div class="v">${fmt(p.metrics.gad7)}</div></div>
+        <div class="mini"><div class="k">Heart Rate</div><div class="v">${fmt(p.metrics.hr)}</div></div>
+        <div class="mini"><div class="k">RMSSD</div><div class="v">${fmt(p.metrics.rmssd)}</div></div>
+        <div class="mini"><div class="k">LF/HF</div><div class="v">${fmt(p.metrics.lf_hf)}</div></div>
+      `;
+
+      const alertsCard = document.getElementById("alerts-card");
+      const alertRows = (p.forecast && p.forecast.alerts) ? p.forecast.alerts : [];
+      if (!alertRows.length) {
+        alertsCard.innerHTML = `<div class="fact"><strong>Current alert state</strong><span style="color:#2e7d32">No scores above 90th percentile thresholds</span></div>`;
+      } else {
+        alertsCard.innerHTML =
+          `<div class="fact"><strong>Current alert state</strong><span style="color:#c62828;font-weight:700">One or more scales exceeded 90th percentile</span></div>` +
+          alertRows.map(a => `
+            <div class="alert-row">
+              <div><div class="alert-title">Day ${a.day} (${a.source})</div><div class="alert-meta">${a.reason}</div></div>
+              <div class="alert-pill">Alert</div>
+            </div>
+          `).join("");
+      }
+
+      const ex = p.explanation || {};
+      document.getElementById("explain-card").innerHTML = `
+        <div class="fact"><strong>Risk context</strong><span>${ex.risk || "No additional risk note."}</span></div>
+        <div class="fact"><strong>Protective context</strong><span>${ex.protective || "No protective note available."}</span></div>
+      `;
+
+      drawPhysioHabitSmallMultiples(p);
+      drawMentalChart(p);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function goList() {
+      STATE.selected = null;
+      document.getElementById("detail-view").classList.add("hidden");
+      document.getElementById("list-view").classList.remove("hidden");
+      document.getElementById("breadcrumb").innerHTML = "Dashboard &rsaquo; Mental Health BioSignal Monitoring";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    document.getElementById("search").addEventListener("input", renderTable);
+    document.getElementById("statusFilter").addEventListener("change", renderTable);
+    document.getElementById("alertFilter").addEventListener("change", renderTable);
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("search").value = "";
+      document.getElementById("statusFilter").value = "";
+      document.getElementById("alertFilter").value = "";
+      STATE.sortKey = "status_order";
+      STATE.sortDir = "asc";
+      renderTable();
+    });
+    document.querySelectorAll("thead th[data-sort]").forEach(th => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.sort;
+        if (STATE.sortKey === key) STATE.sortDir = STATE.sortDir === "asc" ? "desc" : "asc";
+        else { STATE.sortKey = key; STATE.sortDir = "asc"; }
+        renderTable();
+      });
+    });
+    document.getElementById("backBtn").addEventListener("click", goList);
+
+    async function initDashboard() {
+      if (DATA && Array.isArray(DATA.patients) && DATA.patients.length > 0) {
+        ACTIVE_DATA = DATA;
+      }
+      try {
+        const res = await fetch("./data/dashboard_data.json", { cache: "no-store" });
+        if (res.ok) {
+          const payload = await res.json();
+          if (payload && Array.isArray(payload.patients)) {
+            ACTIVE_DATA = payload;
+          }
+        }
+      } catch (err) {
+        console.warn("Using embedded dashboard data fallback", err);
+      }
+      renderTable();
+    }
+
+    initDashboard();
+  </script>
+</body>
+</html>

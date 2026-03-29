@@ -1,5 +1,7 @@
-numpy>=1.26
+numpy>=1.26,<2.0
 pandas>=2.2
 scikit-learn>=1.5
 streamlit>=1.42
 plotly>=5.24
+tensorflow-macos==2.16.2
+tensorflow-metal==1.2.0
