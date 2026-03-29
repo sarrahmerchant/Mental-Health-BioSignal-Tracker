@@ -1,2 +1,7 @@
 .venv
 .cursor
+data/
+old*.py
+only_*.py
+.vscode/
+*.ipynb
